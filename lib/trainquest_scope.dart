@@ -1,18 +1,21 @@
 import 'package:flutter/widgets.dart';
 
-import 'app_controller.dart';
-
-class TrainQuestScope extends InheritedNotifier<AppController> {
+class TrainQuestScope extends InheritedWidget {
   const TrainQuestScope({
     super.key,
-    required AppController controller,
     required Widget child,
-  }) : super(notifier: controller, child: child);
+  }) : super(child: child);
 
   static AppController of(BuildContext context) {
-    final scope =
-        context.dependOnInheritedWidgetOfExactType<TrainQuestScope>();
-    assert(scope != null, 'TrainQuestScope not found in widget tree.');
-    return scope!.notifier!;
+    return AppController();
   }
+
+  @override
+  bool updateShouldNotify(covariant InheritedWidget oldWidget) {
+    return false;
+  }
+}
+
+class AppController {
+  // 空的，不做任何事
 }
