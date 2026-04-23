@@ -33,12 +33,14 @@ class _AuthPageState extends State<AuthPage> {
 
   // 🔥 完全离线，直接跳主页，永不出错
   Future<void> _submit() async {
-    FocusScope.of(context).unfocus();
-    if (mounted) {
-      Navigator.pushReplacementNamed(context, '/dashboard');
-    }
-  }
+  // 🔥 去掉所有 API 请求，直接跳转
+  FocusScope.of(context).unfocus();
 
+  // 直接进入主页，不再请求网络
+  if (mounted) {
+    Navigator.pushReplacementNamed(context, '/dashboard');
+  }
+}
   @override
   Widget build(BuildContext context) {
     return Scaffold(
