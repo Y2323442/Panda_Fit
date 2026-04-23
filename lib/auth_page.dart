@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import 'app_controller.dart';
 
 class AuthPage extends StatefulWidget {
@@ -32,26 +31,16 @@ class _AuthPageState extends State<AuthPage> {
     super.dispose();
   }
 
-  // 🔥 核心修改：不请求API，直接登录成功
+  // 🔥 完全离线，直接跳主页，永不出错
   Future<void> _submit() async {
-  FocusScope.of(context).unfocus();
-
-  // 直接调用原来的 login，不报错、不请求API
-  await widget.controller.login(
-    email: _emailController.text.trim(),
-    password: _passwordController.text.trim(),
-  );
-
-  // 直接跳主页
-  if (mounted) {
-    Navigator.pushReplacementNamed(context, '/dashboard');
+    FocusScope.of(context).unfocus();
+    if (mounted) {
+      Navigator.pushReplacementNamed(context, '/dashboard');
+    }
   }
-}
 
   @override
   Widget build(BuildContext context) {
-    final controller = widget.controller;
-
     return Scaffold(
       backgroundColor: bgColor,
       body: SafeArea(
@@ -67,7 +56,7 @@ class _AuthPageState extends State<AuthPage> {
                   borderRadius: BorderRadius.circular(36),
                   boxShadow: <BoxShadow>[
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.08),
+                      color: Colors.black.withOpacity(0.08),
                       blurRadius: 30,
                       offset: const Offset(0, 18),
                     ),
@@ -104,20 +93,28 @@ class _AuthPageState extends State<AuthPage> {
                           ? 'Create an account (offline mode)'
                           : 'Sign in (offline mode)',
                       style: TextStyle(
-                        color: Colors.black.withValues(alpha: 0.6),
+                        color: Colors.black.withOpacity(0.6),
                         height: 1.45,
                       ),
                     ),
                     const SizedBox(height: 22),
                     Row(
                       children: <Widget>[
-                        _modeButton(label: 'Login', selected: !_isRegisterMode, onTap: () {
-                          setState(() => _isRegisterMode = false);
-                        }),
+                        _modeButton(
+                          label: 'Login',
+                          selected: !_isRegisterMode,
+                          onTap: () {
+                            setState(() => _isRegisterMode = false);
+                          },
+                        ),
                         const SizedBox(width: 12),
-                        _modeButton(label: 'Register', selected: _isRegisterMode, onTap: () {
-                          setState(() => _isRegisterMode = true);
-                        }),
+                        _modeButton(
+                          label: 'Register',
+                          selected: _isRegisterMode,
+                          onTap: () {
+                            setState(() => _isRegisterMode = true);
+                          },
+                        ),
                       ],
                     ),
                     const SizedBox(height: 24),
@@ -142,7 +139,6 @@ class _AuthPageState extends State<AuthPage> {
                       icon: Icons.lock_outline,
                       obscureText: true,
                     ),
-                    // 错误提示隐藏
                     const SizedBox(height: 20),
                     SizedBox(
                       width: double.infinity,
@@ -169,7 +165,7 @@ class _AuthPageState extends State<AuthPage> {
                     Text(
                       'Running in offline mode',
                       style: TextStyle(
-                        color: Colors.black.withValues(alpha: 0.45),
+                        color: Colors.black.withOpacity(0.45),
                         fontSize: 12,
                       ),
                     ),

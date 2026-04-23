@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'models/trainquest_models.dart';
-import 'trainquest_scope.dart';
 
 class TaskPage extends StatefulWidget {
   const TaskPage({super.key});
@@ -15,69 +13,65 @@ class _TaskPageState extends State<TaskPage> {
   static const Color darkCard = Color(0xFF1A1C1E);
 
   int _selectedTab = 0;
-  bool _loading = true;
+  bool _loading = false;
   String? _error;
-  List<AppTask> _dailyTasks = <AppTask>[];
-  List<AppTask> _projects = <AppTask>[];
+
+  // 本地任务（纯静态）
+  List<LocalTask> _dailyTasks = [
+    LocalTask(
+      id: 1,
+      title: "Morning Workout",
+      description: "",
+      timeSlot: "08:00",
+      status: "active",
+      category: "daily",
+    ),
+    LocalTask(
+      id: 2,
+      title: "Evening Stretch",
+      description: "",
+      timeSlot: "19:00",
+      status: "completed",
+      category: "daily",
+    ),
+  ];
+
+  List<LocalTask> _projects = [
+    LocalTask(
+      id: 3,
+      title: "Fitness Plan",
+      description: "Weekly training goal",
+      timeSlot: "",
+      status: "active",
+      category: "project",
+    ),
+  ];
+
+  int _nextId = 4;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadData();
-    });
+    _sortDailyTasks();
   }
 
   Future<void> _loadData({bool showLoader = true}) async {
-    final controller = TrainQuestScope.of(context);
-
-    if (showLoader) {
-      setState(() {
-        _loading = true;
-        _error = null;
-      });
-    }
-
-    try {
-      final dailyTasks = await controller.api.fetchTasks(
-        controller.token,
-        category: 'daily',
-      );
-      final projects = await controller.api.fetchTasks(
-        controller.token,
-        category: 'project',
-      );
-
-      // ✅ 修复：严格按 小时:分钟 24小时制排序（下午也正确）
-      dailyTasks.sort((a, b) {
-        final t1 = _parseTimeOfDay(a.timeSlot);
-        final t2 = _parseTimeOfDay(b.timeSlot);
-        final total1 = t1.hour * 60 + t1.minute;
-        final total2 = t2.hour * 60 + t2.minute;
-        return total1.compareTo(total2);
-      });
-
-      if (!mounted) return;
-
-      setState(() {
-        _dailyTasks = dailyTasks;
-        _projects = projects;
-        _loading = false;
-      });
-    } catch (error) {
-      if (!mounted) return;
-      setState(() {
-        _error = error.toString();
-        _loading = false;
-      });
-    }
+    setState(() {});
   }
 
-  // ✅ 核心修复：12/24小时制解析（PM/AM 完全正确）
+  void _sortDailyTasks() {
+    _dailyTasks.sort((a, b) {
+      final t1 = _parseTimeOfDay(a.timeSlot);
+      final t2 = _parseTimeOfDay(b.timeSlot);
+      final total1 = t1.hour * 60 + t1.minute;
+      final total2 = t2.hour * 60 + t2.minute;
+      return total1.compareTo(total2);
+    });
+  }
+
   TimeOfDay _parseTimeOfDay(String timeStr) {
     try {
       final s = timeStr.trim().toLowerCase();
-      // 匹配：9:30 am / 3pm / 14:00 / 02:45 PM 等所有格式
       final match = RegExp(
         r'(\d{1,2}):?(\d{0,2})\s*(am|pm)?',
         caseSensitive: false,
@@ -89,11 +83,10 @@ class _TaskPageState extends State<TaskPage> {
       final minute = int.tryParse(match.group(2) ?? '0') ?? 0;
       final period = match.group(3);
 
-      // 处理 PM/AM
       if (period == 'pm') {
-        if (hour < 12) hour += 12; // 3pm → 15
+        if (hour < 12) hour += 12;
       } else if (period == 'am') {
-        if (hour == 12) hour = 0; // 12am → 0
+        if (hour == 12) hour = 0;
       }
 
       return TimeOfDay(hour: hour, minute: minute);
@@ -103,7 +96,6 @@ class _TaskPageState extends State<TaskPage> {
   }
 
   Future<void> _showAddDialog() async {
-    final controller = TrainQuestScope.of(context);
     final titleController = TextEditingController();
     TimeOfDay? selectedTime = TimeOfDay.now();
 
@@ -131,11 +123,6 @@ class _TaskPageState extends State<TaskPage> {
                     fillColor: Colors.white,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: Colors.black12),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: Colors.black12),
                     ),
                   ),
                 ),
@@ -146,24 +133,7 @@ class _TaskPageState extends State<TaskPage> {
                     onTap: () async {
                       final picked = await showTimePicker(
                         context: context,
-                        initialTime: selectedTime ?? TimeOfDay.now(),
-                        builder: (context, child) {
-                          return Theme(
-                            data: Theme.of(context).copyWith(
-                              colorScheme: ColorScheme.light(
-                                primary: mainGreen,
-                                onPrimary: Colors.black,
-                                onSurface: Colors.black,
-                              ),
-                              textButtonTheme: TextButtonThemeData(
-                                style: TextButton.styleFrom(
-                                  foregroundColor: Colors.black,
-                                ),
-                              ),
-                            ),
-                            child: child!,
-                          );
-                        },
+                        initialTime: selectedTime!,
                       );
                       if (picked != null) {
                         setStateDialog(() {
@@ -172,10 +142,7 @@ class _TaskPageState extends State<TaskPage> {
                       }
                     },
                     child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 14,
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(12),
@@ -184,11 +151,8 @@ class _TaskPageState extends State<TaskPage> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            selectedTime?.format(context) ?? 'Select time',
-                            style: const TextStyle(fontSize: 15),
-                          ),
-                          const Icon(Icons.access_time_rounded, size: 20),
+                          Text(selectedTime!.format(context)),
+                          const Icon(Icons.access_time),
                         ],
                       ),
                     ),
@@ -201,38 +165,41 @@ class _TaskPageState extends State<TaskPage> {
                 child: const Text('Cancel'),
               ),
               ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.black,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                onPressed: () async {
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.black),
+                onPressed: () {
                   final title = titleController.text.trim();
                   if (title.isEmpty) return;
 
-                  try {
-                    final timeStr = selectedTime?.format(context) ?? '';
-                    await controller.api.createTask(
-                      controller.token,
-                      title: title,
-                      category: 'daily',
-                      timeSlot: timeStr,
-                    );
-                    if (!mounted) return;
-                    Navigator.pop(context);
-                    await _loadData(showLoader: false);
-                  } catch (e) {
-                    if (!mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(e.toString())),
-                    );
-                  }
+                  setState(() {
+                    if (_selectedTab == 0) {
+                      _dailyTasks.add(
+                        LocalTask(
+                          id: _nextId++,
+                          title: title,
+                          description: "",
+                          timeSlot: selectedTime!.format(context),
+                          status: "active",
+                          category: "daily",
+                        ),
+                      );
+                      _sortDailyTasks();
+                    } else {
+                      _projects.add(
+                        LocalTask(
+                          id: _nextId++,
+                          title: title,
+                          description: "",
+                          timeSlot: "",
+                          status: "active",
+                          category: "project",
+                        ),
+                      );
+                    }
+                  });
+
+                  Navigator.pop(context);
                 },
-                child: const Text(
-                  'Add',
-                  style: TextStyle(color: mainGreen),
-                ),
+                child: Text('Add', style: TextStyle(color: mainGreen)),
               ),
             ],
           );
@@ -241,70 +208,43 @@ class _TaskPageState extends State<TaskPage> {
     );
   }
 
-  Future<void> _toggleComplete(AppTask task) async {
-    final controller = TrainQuestScope.of(context);
-    try {
-      if (task.status != 'completed') {
-        await controller.api.completeTask(controller.token, task.id);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Marked as completed'),
-            backgroundColor: Colors.black,
-          ),
-        );
-      } else {
-        await controller.api.uncompleteTask(controller.token, task.id);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Completed canceled'),
-            backgroundColor: Colors.black,
-          ),
-        );
-      }
-      await _loadData(showLoader: false);
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
-      );
-    }
+  Future<void> _toggleComplete(LocalTask task) async {
+    setState(() {
+      task.status = task.status == 'completed' ? 'active' : 'completed';
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(task.status == 'completed' ? 'Marked as completed' : 'Completed canceled'),
+        backgroundColor: Colors.black,
+      ),
+    );
   }
 
-  Future<void> _deleteTask(AppTask task) async {
+  Future<void> _deleteTask(LocalTask task) async {
     final confirm = await showDialog<bool>(
-          context: context,
-          builder: (c) => AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(24),
-            ),
-            title: const Text('Delete task?'),
-            content: Text('Delete "${task.title}"?'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(c, false),
-                child: const Text('Cancel'),
-              ),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.black),
-                onPressed: () => Navigator.pop(c, true),
-                child: const Text('Delete', style: TextStyle(color: mainGreen)),
-              ),
-            ],
+      context: context,
+      builder: (c) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: const Text('Delete task?'),
+        content: Text('Delete "${task.title}"?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Cancel')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.black),
+            onPressed: () => Navigator.pop(c, true),
+            child: const Text('Delete', style: TextStyle(color: mainGreen)),
           ),
-        ) ??
-        false;
+        ],
+      ),
+    ) ?? false;
 
     if (!confirm) return;
-    final controller = TrainQuestScope.of(context);
-    try {
-      await controller.api.deleteTask(controller.token, task.id);
-      await _loadData(showLoader: false);
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
-      );
-    }
+
+    setState(() {
+      _dailyTasks.removeWhere((t) => t.id == task.id);
+      _projects.removeWhere((t) => t.id == task.id);
+    });
   }
 
   @override
@@ -315,17 +255,14 @@ class _TaskPageState extends State<TaskPage> {
         child: Stack(
           children: [
             RefreshIndicator(
-              onRefresh: () => _loadData(showLoader: false),
+              onRefresh: _loadData,
               child: ListView(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 children: [
                   const SizedBox(height: 20),
                   const Text(
                     'Task',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 6),
                   const Text(
@@ -335,19 +272,12 @@ class _TaskPageState extends State<TaskPage> {
                   const SizedBox(height: 24),
                   _buildTabs(),
                   const SizedBox(height: 24),
-                  if (_loading)
-                    const Padding(
-                      padding: EdgeInsets.only(top: 60),
-                      child: Center(child: CircularProgressIndicator()),
-                    )
-                  else if (_error != null)
+                  if (_error != null)
                     _buildErrorCard()
                   else
                     AnimatedSwitcher(
                       duration: const Duration(milliseconds: 350),
-                      child: _selectedTab == 0
-                          ? _buildDailyList()
-                          : _buildProjectList(),
+                      child: _selectedTab == 0 ? _buildDailyList() : _buildProjectList(),
                     ),
                   const SizedBox(height: 120),
                 ],
@@ -364,12 +294,6 @@ class _TaskPageState extends State<TaskPage> {
                   decoration: BoxDecoration(
                     color: Colors.black,
                     borderRadius: BorderRadius.circular(22),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.15),
-                        blurRadius: 16,
-                      ),
-                    ],
                   ),
                   child: const Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -378,11 +302,7 @@ class _TaskPageState extends State<TaskPage> {
                       SizedBox(width: 10),
                       Text(
                         'Add New Record',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 17,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold),
                       ),
                     ],
                   ),
@@ -415,13 +335,6 @@ class _TaskPageState extends State<TaskPage> {
         decoration: BoxDecoration(
           color: active ? Colors.black : Colors.white,
           borderRadius: BorderRadius.circular(18),
-          boxShadow: [
-            if (active)
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 8,
-              ),
-          ],
         ),
         child: Text(
           label,
@@ -437,20 +350,15 @@ class _TaskPageState extends State<TaskPage> {
 
   Widget _buildDailyList() {
     if (_dailyTasks.isEmpty) {
-      return _buildEmptyCard(
-        'No daily tasks yet',
-        'Add your first task to get started',
-      );
+      return _buildEmptyCard('No daily tasks yet', 'Add your first task to get started');
     }
     return Column(
       key: const ValueKey(0),
-      children: [
-        for (final task in _dailyTasks) _buildDailyItem(task),
-      ],
+      children: [for (final task in _dailyTasks) _buildDailyItem(task)],
     );
   }
 
-  Widget _buildDailyItem(AppTask task) {
+  Widget _buildDailyItem(LocalTask task) {
     final done = task.status == 'completed';
     return IntrinsicHeight(
       child: Row(
@@ -464,15 +372,10 @@ class _TaskPageState extends State<TaskPage> {
                 decoration: BoxDecoration(
                   color: done ? mainGreen : Colors.white,
                   shape: BoxShape.circle,
-                  border: Border.all(
-                    color: done ? mainGreen : Colors.black12,
-                    width: 3,
-                  ),
+                  border: Border.all(color: done ? mainGreen : Colors.black12, width: 3),
                 ),
               ),
-              Expanded(
-                child: Container(width: 2, color: Colors.black12),
-              ),
+              Expanded(child: Container(width: 2, color: Colors.black12)),
             ],
           ),
           const SizedBox(width: 20),
@@ -493,35 +396,22 @@ class _TaskPageState extends State<TaskPage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            task.timeSlot.isNotEmpty
-                                ? task.timeSlot
-                                : 'Any time',
-                            style: TextStyle(
-                              color: done ? Colors.black45 : mainGreen,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 17,
-                            ),
+                            task.timeSlot.isNotEmpty ? task.timeSlot : 'Any time',
+                            style: TextStyle(color: done ? Colors.black45 : mainGreen, fontWeight: FontWeight.bold, fontSize: 17),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             task.title,
-                            style: TextStyle(
-                              color: done ? Colors.black38 : Colors.white,
-                              fontSize: 14,
-                            ),
+                            style: TextStyle(color: done ? Colors.black38 : Colors.white, fontSize: 14),
                           ),
                         ],
                       ),
                     ),
                     IconButton(
                       onPressed: () => _deleteTask(task),
-                      icon: Icon(
-                        Icons.delete_outline,
-                        color: done ? Colors.black45 : Colors.white54,
-                      ),
+                      icon: Icon(Icons.delete_outline, color: done ? Colors.black45 : Colors.white54),
                     ),
-                    if (done)
-                      const Icon(Icons.check_circle, color: mainGreen, size: 26),
+                    if (done) const Icon(Icons.check_circle, color: mainGreen, size: 26),
                   ],
                 ),
               ),
@@ -534,20 +424,15 @@ class _TaskPageState extends State<TaskPage> {
 
   Widget _buildProjectList() {
     if (_projects.isEmpty) {
-      return _buildEmptyCard(
-        'No projects yet',
-        'Create a project to track long-term goals',
-      );
+      return _buildEmptyCard('No projects yet', 'Create a project to track long-term goals');
     }
     return Column(
       key: const ValueKey(1),
-      children: [
-        for (final task in _projects) _buildProjectCard(task),
-      ],
+      children: [for (final task in _projects) _buildProjectCard(task)],
     );
   }
 
-  Widget _buildProjectCard(AppTask task) {
+  Widget _buildProjectCard(LocalTask task) {
     final done = task.status == 'completed';
     final progress = done ? 1.0 : 0.35;
 
@@ -559,12 +444,6 @@ class _TaskPageState extends State<TaskPage> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(32),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.02),
-              blurRadius: 12,
-            ),
-          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -573,61 +452,27 @@ class _TaskPageState extends State<TaskPage> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Expanded(
-                  child: Text(
-                    task.title,
-                    style: const TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  child: Text(task.title, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
                 ),
-                IconButton(
-                  onPressed: () => _deleteTask(task),
-                  icon: const Icon(
-                    Icons.delete_outline,
-                    color: Colors.black38,
-                  ),
-                ),
+                IconButton(onPressed: () => _deleteTask(task), icon: const Icon(Icons.delete_outline, color: Colors.black38)),
               ],
             ),
             if (task.description.isNotEmpty) ...[
               const SizedBox(height: 8),
-              Text(
-                task.description,
-                style: const TextStyle(color: Colors.black54),
-              ),
+              Text(task.description, style: const TextStyle(color: Colors.black54)),
             ],
             const SizedBox(height: 18),
             Stack(
               children: [
-                Container(
-                  height: 10,
-                  decoration: BoxDecoration(
-                    color: bgColor,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
+                Container(height: 10, decoration: BoxDecoration(color: bgColor, borderRadius: BorderRadius.circular(8))),
                 FractionallySizedBox(
                   widthFactor: progress,
-                  child: Container(
-                    height: 10,
-                    decoration: BoxDecoration(
-                      color: mainGreen,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
+                  child: Container(height: 10, decoration: BoxDecoration(color: mainGreen, borderRadius: BorderRadius.circular(8))),
                 ),
               ],
             ),
             const SizedBox(height: 8),
-            Text(
-              done ? 'Completed' : 'In progress',
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 12,
-                color: mainGreen,
-              ),
-            ),
+            Text(done ? 'Completed' : 'In progress', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: mainGreen)),
           ],
         ),
       ),
@@ -638,31 +483,14 @@ class _TaskPageState extends State<TaskPage> {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(32),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(28),
-      ),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(28)),
       child: Column(
         children: [
-          Icon(
-            Icons.inbox_outlined,
-            size: 44,
-            color: Colors.black38.withOpacity(0.4),
-          ),
+          Icon(Icons.inbox_outlined, size: 44, color: Colors.black38),
           const SizedBox(height: 16),
-          Text(
-            title,
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 18,
-            ),
-          ),
+          Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
           const SizedBox(height: 6),
-          Text(
-            subtitle,
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.black54),
-          ),
+          Text(subtitle, textAlign: TextAlign.center, style: const TextStyle(color: Colors.black54)),
         ],
       ),
     );
@@ -672,31 +500,17 @@ class _TaskPageState extends State<TaskPage> {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(32),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(28),
-      ),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(28)),
       child: Column(
         children: [
-          const Icon(
-            Icons.error_outline,
-            size: 44,
-            color: Colors.redAccent,
-          ),
+          const Icon(Icons.error_outline, size: 44, color: Colors.redAccent),
           const SizedBox(height: 16),
-          Text(
-            _error ?? 'Failed to load tasks',
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.black54),
-          ),
+          const Text('Failed to load tasks', textAlign: TextAlign.center, style: TextStyle(color: Colors.black54)),
           const SizedBox(height: 18),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.black),
-            onPressed: () => _loadData(),
-            child: const Text(
-              'Retry',
-              style: TextStyle(color: mainGreen),
-            ),
+            onPressed: _loadData,
+            child: const Text('Retry', style: TextStyle(color: mainGreen)),
           ),
         ],
       ),
@@ -705,12 +519,7 @@ class _TaskPageState extends State<TaskPage> {
 }
 
 class _ScaleTap extends StatefulWidget {
-  const _ScaleTap({
-    super.key,
-    required this.child,
-    required this.onTap,
-  });
-
+  const _ScaleTap({super.key, required this.child, required this.onTap});
   final Widget child;
   final VoidCallback onTap;
 
@@ -736,4 +545,23 @@ class _ScaleTapState extends State<_ScaleTap> {
       ),
     );
   }
+}
+
+// 本地静态任务模型（解决所有报错）
+class LocalTask {
+  final int id;
+  final String title;
+  final String description;
+  final String timeSlot;
+  String status;
+  final String category;
+
+  LocalTask({
+    required this.id,
+    required this.title,
+    required this.description,
+    required this.timeSlot,
+    required this.status,
+    required this.category,
+  });
 }

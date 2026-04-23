@@ -1,10 +1,6 @@
 import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-
-import 'models/trainquest_models.dart';
-import 'trainquest_scope.dart';
 
 class GrowPage extends StatefulWidget {
   const GrowPage({super.key});
@@ -22,20 +18,40 @@ class _GrowPageState extends State<GrowPage> {
   final List<String> _tabs = <String>['Daily', 'Weekly', 'Monthly', 'Quarterly'];
   final PageController _galleryController = PageController();
 
-  bool _loading = true;
+  bool _loading = false;
   bool _uploading = false;
   String? _error;
-  DashboardData? _dashboard;
-  ProgressRecordModel? _todayProgress;
-  List<WorkoutPhotoModel> _photos = <WorkoutPhotoModel>[];
   int _galleryIndex = 0;
+
+  // 🔥 本地模拟数据，完全不请求后端
+  Map<String, dynamic> mockUser = {
+    "level": 1,
+    "xp": 10,
+    "streakDays": 2,
+    "totalSignInDays": 5,
+  };
+
+  Map<String, dynamic> mockProgress = {
+    "steps": 1200,
+    "workoutMinutes": 45,
+    "calories": 320,
+    "distanceKm": 2.5,
+  };
+
+  Map<String, dynamic> mockWeekly = {
+    "totalDistance": 12.5,
+    "signedDays": 4,
+    "completionRate": 80,
+    "totalMinutes": 220,
+  };
+
+  List<String> localPhotos = [
+    'assets/images/basketball.jpg',
+  ];
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadData();
-    });
   }
 
   @override
@@ -44,58 +60,33 @@ class _GrowPageState extends State<GrowPage> {
     super.dispose();
   }
 
-  Future<void> _loadData({bool showLoader = true}) async {
-    final controller = TrainQuestScope.of(context);
+  // 模拟上传图片（实际不传到服务器）
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final image = await picker.pickImage(source: ImageSource.gallery);
+    if (image == null) return;
 
-    if (showLoader) {
-      setState(() {
-        _loading = true;
-        _error = null;
-      });
-    }
+    setState(() => _uploading = true);
+    await Future.delayed(const Duration(seconds: 1));
 
-    try {
-      final dashboard = await controller.api.fetchHome(controller.token);
-      final todayProgress = await controller.api.fetchTodayProgress(controller.token);
-      final photos = await controller.api.fetchPhotos(controller.token);
-      await controller.updateUser(dashboard.user);
+    setState(() {
+      localPhotos.add(image.path);
+      _uploading = false;
+    });
 
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        _dashboard = dashboard;
-        _todayProgress = todayProgress;
-        _photos = photos;
-        _loading = false;
-      });
-    } catch (error) {
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        _error = error.toString();
-        _loading = false;
-      });
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Photo saved locally')),
+      );
     }
   }
 
+  // 模拟更新今日数据（只存在内存）
   Future<void> _updateTodayProgress() async {
-    final progress = _todayProgress;
-    if (progress == null) {
-      return;
-    }
-
-    final stepsController =
-        TextEditingController(text: progress.steps.toString());
-    final minutesController =
-        TextEditingController(text: progress.workoutMinutes.toString());
-    final caloriesController =
-        TextEditingController(text: progress.calories.toString());
-    final distanceController =
-        TextEditingController(text: progress.distanceKm.toStringAsFixed(1));
+    final stepsController = TextEditingController(text: mockProgress['steps'].toString());
+    final minutesController = TextEditingController(text: mockProgress['workoutMinutes'].toString());
+    final caloriesController = TextEditingController(text: mockProgress['calories'].toString());
+    final distanceController = TextEditingController(text: mockProgress['distanceKm'].toStringAsFixed(1));
 
     await showDialog<void>(
       context: context,
@@ -105,56 +96,26 @@ class _GrowPageState extends State<GrowPage> {
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
+            children: [
               _numberField(controller: stepsController, label: 'Steps'),
-              _numberField(
-                controller: minutesController,
-                label: 'Workout minutes',
-              ),
+              _numberField(controller: minutesController, label: 'Workout minutes'),
               _numberField(controller: caloriesController, label: 'Calories'),
-              _numberField(
-                controller: distanceController,
-                label: 'Distance (km)',
-              ),
+              _numberField(controller: distanceController, label: 'Distance (km)'),
             ],
           ),
         ),
-        actions: <Widget>[
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.black),
-            onPressed: () async {
-              final controller = TrainQuestScope.of(context);
-
-              try {
-                await controller.api.updateTodayProgress(
-                  controller.token,
-                  steps: int.tryParse(stepsController.text.trim()) ?? 0,
-                  workoutMinutes:
-                      int.tryParse(minutesController.text.trim()) ?? 0,
-                  calories: int.tryParse(caloriesController.text.trim()) ?? 0,
-                  distanceKm:
-                      double.tryParse(distanceController.text.trim()) ?? 0,
-                );
-
-                if (!mounted) {
-                  return;
-                }
-
-                Navigator.pop(context);
-                await _loadData(showLoader: false);
-              } catch (error) {
-                if (!mounted) {
-                  return;
-                }
-
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(error.toString())),
-                );
-              }
+            onPressed: () {
+              setState(() {
+                mockProgress['steps'] = int.tryParse(stepsController.text.trim()) ?? 0;
+                mockProgress['workoutMinutes'] = int.tryParse(minutesController.text.trim()) ?? 0;
+                mockProgress['calories'] = int.tryParse(caloriesController.text.trim()) ?? 0;
+                mockProgress['distanceKm'] = double.tryParse(distanceController.text.trim()) ?? 0.0;
+              });
+              Navigator.pop(context);
             },
             child: const Text('Save', style: TextStyle(color: mainGreen)),
           ),
@@ -163,76 +124,11 @@ class _GrowPageState extends State<GrowPage> {
     );
   }
 
+  // 模拟签到（只在内存）
   Future<void> _signInToday() async {
-    final controller = TrainQuestScope.of(context);
-
-    try {
-      final result = await controller.api.signInToday(controller.token);
-      await controller.updateUser(result.user);
-
-      if (!mounted) {
-        return;
-      }
-
-      await _loadData(showLoader: false);
-
-      final badgeMessage = result.newBadges.isEmpty
-          ? 'Signed in successfully.'
-          : 'Signed in successfully. New badges: ${result.newBadges.join(', ')}';
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(badgeMessage)),
-      );
-    } catch (error) {
-      if (!mounted) {
-        return;
-      }
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.toString())),
-      );
-    }
-  }
-
-  Future<void> _pickImage() async {
-    final controller = TrainQuestScope.of(context);
-    final picker = ImagePicker();
-    final image = await picker.pickImage(source: ImageSource.gallery);
-
-    if (image == null) {
-      return;
-    }
-
-    setState(() => _uploading = true);
-
-    try {
-      await controller.api.uploadPhoto(
-        controller.token,
-        File(image.path),
-        caption: 'Workout moment',
-      );
-
-      if (!mounted) {
-        return;
-      }
-
-      await _loadData(showLoader: false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Photo uploaded successfully.')),
-      );
-    } catch (error) {
-      if (!mounted) {
-        return;
-      }
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.toString())),
-      );
-    } finally {
-      if (mounted) {
-        setState(() => _uploading = false);
-      }
-    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Signed in successfully (local)')),
+    );
   }
 
   @override
@@ -241,18 +137,16 @@ class _GrowPageState extends State<GrowPage> {
       backgroundColor: bgColor,
       body: SafeArea(
         child: RefreshIndicator(
-          onRefresh: () => _loadData(showLoader: false),
+          onRefresh: () async {
+            setState(() {});
+          },
           child: ListView(
             padding: const EdgeInsets.symmetric(horizontal: 20),
-            children: <Widget>[
+            children: [
               const SizedBox(height: 20),
               const Text(
                 'Grow',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 1.2,
-                ),
+                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, letterSpacing: 1.2),
               ),
               const SizedBox(height: 8),
               const Text(
@@ -262,22 +156,12 @@ class _GrowPageState extends State<GrowPage> {
               const SizedBox(height: 25),
               _buildTimeTabs(),
               const SizedBox(height: 25),
-              if (_loading)
-                const Padding(
-                  padding: EdgeInsets.only(top: 80),
-                  child: Center(child: CircularProgressIndicator()),
-                )
-              else if (_error != null)
-                _buildErrorCard()
-              else ...<Widget>[
-                _buildKeepItUpCard(),
-                const SizedBox(height: 20),
-                _buildImageGallery(),
-                const SizedBox(height: 20),
-                _buildMetricsSection(),
-                const SizedBox(height: 20),
-                
-              ],
+              _buildKeepItUpCard(),
+              const SizedBox(height: 20),
+              _buildImageGallery(),
+              const SizedBox(height: 20),
+              _buildMetricsSection(),
+              const SizedBox(height: 20),
             ],
           ),
         ),
@@ -298,18 +182,11 @@ class _GrowPageState extends State<GrowPage> {
             decoration: BoxDecoration(
               color: isSelected ? mainGreen : Colors.white,
               shape: BoxShape.circle,
-              boxShadow: <BoxShadow>[
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
+              boxShadow: [
+                BoxShadow(color: Colors.black12, blurRadius: 10, offset: const Offset(0, 4)),
               ],
             ),
-            child: Text(
-              tab,
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-            ),
+            child: Text(tab, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
           ),
         );
       }).toList(),
@@ -317,53 +194,29 @@ class _GrowPageState extends State<GrowPage> {
   }
 
   Widget _buildKeepItUpCard() {
-    final dashboard = _dashboard!;
-    final user = dashboard.user;
-    final summary = dashboard.weeklySummary;
-    final messages = <String>[
-      'Streak: ${user.streakDays} days\nStay consistent today.',
-      'This week: ${summary.totalMinutes} minutes\nKeep your momentum strong.',
-      'XP: ${user.xp}\nYour backend progress is syncing live.',
-    ];
-
     return Container(
       height: 180,
       decoration: BoxDecoration(
         color: darkCard,
         borderRadius: BorderRadius.circular(40),
-        boxShadow: <BoxShadow>[
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.2),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
-          ),
+        boxShadow: [
+          BoxShadow(color: Colors.black26, blurRadius: 15, offset: const Offset(0, 8)),
         ],
       ),
       child: Padding(
         padding: const EdgeInsets.all(30),
         child: Row(
-          children: <Widget>[
+          children: [
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  const Text(
-                    'Keep It Up',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                children: [
+                  const Text('Keep It Up', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 10),
                   Text(
-                    messages[_tabMessageIndex],
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.7),
-                      fontSize: 13,
-                      height: 1.4,
-                    ),
+                    _selectedTabMessage,
+                    style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
                   ),
                 ],
               ),
@@ -375,55 +228,36 @@ class _GrowPageState extends State<GrowPage> {
     );
   }
 
-  int get _tabMessageIndex {
+  String get _selectedTabMessage {
     switch (_selectedTab) {
       case 'Weekly':
-        return 1;
+        return 'Streak: ${mockUser["streakDays"]} days\nWeekly: ${mockWeekly["totalMinutes"]} min';
       case 'Monthly':
       case 'Quarterly':
-        return 2;
-      case 'Daily':
+        return 'Level: ${mockUser["level"]}  XP: ${mockUser["xp"]}';
       default:
-        return 0;
+        return 'Streak: ${mockUser["streakDays"]} days\nKeep going today!';
     }
   }
 
   Widget _buildImageGallery() {
-    final controller = TrainQuestScope.of(context);
-
     return Stack(
-      children: <Widget>[
+      children: [
         SizedBox(
           height: 220,
           child: ClipRRect(
             borderRadius: BorderRadius.circular(40),
             child: PageView.builder(
               controller: _galleryController,
-              onPageChanged: (index) => setState(() => _galleryIndex = index),
-              itemCount: _photos.isEmpty ? 1 : _photos.length,
+              onPageChanged: (i) => setState(() => _galleryIndex = i),
+              itemCount: localPhotos.length,
               itemBuilder: (context, index) {
-                if (_photos.isEmpty) {
-                  return Image.asset(
-                    'assets/images/basketball.jpg',
-                    fit: BoxFit.cover,
-                  );
+                final path = localPhotos[index];
+                if (path.startsWith('assets/')) {
+                  return Image.asset(path, fit: BoxFit.cover);
+                } else {
+                  return Image.file(File(path), fit: BoxFit.cover);
                 }
-
-                final photo = _photos[index];
-                return Image.network(
-                  photo.imageUrl(controller.baseUrl),
-                  fit: BoxFit.cover,
-                  headers: <String, String>{
-                    'Authorization': 'Bearer ${controller.token}',
-                  },
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      color: Colors.black12,
-                      alignment: Alignment.center,
-                      child: const Icon(Icons.broken_image, size: 44),
-                    );
-                  },
-                );
               },
             ),
           ),
@@ -432,24 +266,16 @@ class _GrowPageState extends State<GrowPage> {
           top: 20,
           left: 20,
           child: Row(
-            children: List<Widget>.generate(
-              _photos.isEmpty ? 1 : _photos.length,
-              (index) {
-                final isCurrent = index == _galleryIndex;
-                return AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
-                  margin: const EdgeInsets.only(right: 8),
-                  width: isCurrent ? 12 : 8,
-                  height: isCurrent ? 12 : 8,
-                  decoration: BoxDecoration(
-                    color: isCurrent
-                        ? Colors.white
-                        : Colors.white.withValues(alpha: 0.4),
-                    shape: BoxShape.circle,
-                  ),
-                );
-              },
-            ),
+            children: List.generate(localPhotos.length, (i) {
+              final curr = i == _galleryIndex;
+              return AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                margin: const EdgeInsets.only(right: 8),
+                width: curr ? 12 : 8,
+                height: curr ? 12 : 8,
+                decoration: BoxDecoration(color: curr ? Colors.white : Colors.white54, shape: BoxShape.circle),
+              );
+            }),
           ),
         ),
         Positioned(
@@ -459,35 +285,15 @@ class _GrowPageState extends State<GrowPage> {
             onTap: _uploading ? () {} : _pickImage,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.black,
-                borderRadius: BorderRadius.circular(15),
-              ),
+              decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(15)),
               child: Row(
-                children: <Widget>[
+                children: [
                   _uploading
-                      ? const SizedBox(
-                          width: 14,
-                          height: 14,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Icon(
-                          Icons.add_a_photo,
-                          color: Colors.white,
-                          size: 14,
-                        ),
-                  const SizedBox(width: 5),
-                  Text(
-                    _uploading ? 'Uploading...' : 'Add Pictures',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                      ? const SizedBox(width:14,height:14,child: CircularProgressIndicator(strokeWidth:2,color:Colors.white))
+                      : const Icon(Icons.add_a_photo, color: Colors.white, size:14),
+                  const SizedBox(width:5),
+                  Text(_uploading ? 'Uploading...' : 'Add Pictures',
+                      style: const TextStyle(color: Colors.white, fontSize:12, fontWeight: FontWeight.bold)),
                 ],
               ),
             ),
@@ -498,113 +304,51 @@ class _GrowPageState extends State<GrowPage> {
   }
 
   Widget _buildMetricsSection() {
-    final progress = _todayProgress!;
-    final summary = _dashboard!.weeklySummary;
-
     if (_selectedTab == 'Daily') {
       return Column(
-        children: <Widget>[
-          _buildTaskCard(
-            'Today steps',
-            '${progress.steps}',
-            'Keep walking and stay active.',
-            true,
-          ),
-          const SizedBox(height: 20),
-          _buildTaskCard(
-            'Workout minutes',
-            '${progress.workoutMinutes} min',
-            'Calories: ${progress.calories}',
-            false,
-          ),
+        children: [
+          _buildTaskCard('Today steps', '${mockProgress["steps"]}', 'Keep walking.', true),
+          const SizedBox(height:20),
+          _buildTaskCard('Workout minutes', '${mockProgress["workoutMinutes"]} min', 'Calories: ${mockProgress["calories"]}', false),
         ],
       );
     }
-
     if (_selectedTab == 'Weekly') {
       return Column(
-        children: <Widget>[
-          _buildTaskCard(
-            'Weekly distance',
-            '${summary.totalDistance.toStringAsFixed(1)} KM',
-            'Signed days: ${summary.signedDays}',
-            true,
-          ),
-          const SizedBox(height: 20),
-          _buildTaskCard(
-            'Task completion',
-            '${summary.completionRate.toStringAsFixed(0)}%',
-            'Minutes trained: ${summary.totalMinutes}',
-            false,
-          ),
+        children: [
+          _buildTaskCard('Weekly distance', '${mockWeekly["totalDistance"].toStringAsFixed(1)} KM', 'Signed days: ${mockWeekly["signedDays"]}', true),
+          const SizedBox(height:20),
+          _buildTaskCard('Completion', '${mockWeekly["completionRate"].toStringAsFixed(0)}%', 'Minutes: ${mockWeekly["totalMinutes"]}', false),
         ],
       );
     }
-
-    final user = _dashboard!.user;
     return Column(
-      children: <Widget>[
-        _buildTaskCard(
-          'Current level',
-          'Lv.${user.level}',
-          'XP collected: ${user.xp}',
-          true,
-        ),
-        const SizedBox(height: 20),
-        _buildTaskCard(
-          'Total sign-ins',
-          '${user.totalSignInDays}',
-          'Current streak: ${user.streakDays} days',
-          false,
-        ),
+      children: [
+        _buildTaskCard('Level', 'Lv.${mockUser["level"]}', 'XP: ${mockUser["xp"]}', true),
+        const SizedBox(height:20),
+        _buildTaskCard('Sign-ins', '${mockUser["totalSignInDays"]}', 'Streak: ${mockUser["streakDays"]} days', false),
       ],
     );
   }
 
- 
-  Widget _buildTaskCard(
-    String title,
-    String badgeText,
-    String subtitle,
-    bool right,
-  ) {
+  Widget _buildTaskCard(String title, String badgeText, String subtitle, bool right) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: mainGreen,
-        borderRadius: BorderRadius.circular(30),
-      ),
+      decoration: BoxDecoration(color: mainGreen, borderRadius: BorderRadius.circular(30)),
       child: Container(
         padding: const EdgeInsets.all(15),
-        decoration: BoxDecoration(
-          color: const Color(0xFFF9FFF0),
-          borderRadius: BorderRadius.circular(25),
-        ),
+        decoration: BoxDecoration(color: const Color(0xFFF9FFF0), borderRadius: BorderRadius.circular(25)),
         child: Row(
-          children: <Widget>[
+          children: [
             if (!right) _buildBadge(badgeText),
-            if (!right) const SizedBox(width: 15),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(color: Colors.black54),
-                  ),
-                ],
-              ),
-            ),
-            if (right) const SizedBox(width: 10),
+            if (!right) const SizedBox(width:15),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(title, style: const TextStyle(fontSize:15, fontWeight: FontWeight.w600)),
+              const SizedBox(height:6),
+              Text(subtitle, style: const TextStyle(color: Colors.black54)),
+            ])),
+            if (right) const SizedBox(width:10),
             if (right) _buildBadge(badgeText),
           ],
         ),
@@ -614,107 +358,26 @@ class _GrowPageState extends State<GrowPage> {
 
   Widget _buildBadge(String text) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.black,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        text,
-        style: const TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
+      padding: const EdgeInsets.symmetric(horizontal:18, vertical:10),
+      decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(20)),
+      child: Text(text, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
     );
   }
 
-  Widget _buildErrorCard() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(28),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(30),
-      ),
-      child: Column(
-        children: <Widget>[
-          const Icon(Icons.error_outline, size: 42, color: Colors.redAccent),
-          const SizedBox(height: 12),
-          Text(
-            _error ?? 'Could not load grow data.',
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.black54),
-          ),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.black),
-            onPressed: () => _loadData(),
-            child: const Text('Retry', style: TextStyle(color: mainGreen)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _numberField({
-    required TextEditingController controller,
-    required String label,
-  }) {
+  Widget _numberField({required TextEditingController controller, required String label}) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom:12),
       child: TextField(
         controller: controller,
         keyboardType: const TextInputType.numberWithOptions(decimal: true),
-        decoration: InputDecoration(
-          labelText: label,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ActionButton extends StatelessWidget {
-  const _ActionButton({
-    required this.label,
-    required this.background,
-    required this.foreground,
-    required this.onTap,
-  });
-
-  final String label;
-  final Color background;
-  final Color foreground;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return ElevatedButton(
-      style: ElevatedButton.styleFrom(
-        backgroundColor: background,
-        foregroundColor: foreground,
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        elevation: 0,
-      ),
-      onPressed: onTap,
-      child: Text(
-        label,
-        style: const TextStyle(fontWeight: FontWeight.bold),
+        decoration: InputDecoration(labelText: label, border: OutlineInputBorder(borderRadius: BorderRadius.circular(16))),
       ),
     );
   }
 }
 
 class _ScaleTap extends StatefulWidget {
-  const _ScaleTap({
-    required this.child,
-    required this.onTap,
-  });
-
+  const _ScaleTap({required this.child, required this.onTap});
   final Widget child;
   final VoidCallback onTap;
 
@@ -724,7 +387,6 @@ class _ScaleTap extends StatefulWidget {
 
 class _ScaleTapState extends State<_ScaleTap> {
   double _scale = 1.0;
-
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -732,12 +394,7 @@ class _ScaleTapState extends State<_ScaleTap> {
       onTapUp: (_) => setState(() => _scale = 1.0),
       onTapCancel: () => setState(() => _scale = 1.0),
       onTap: widget.onTap,
-      child: AnimatedScale(
-        scale: _scale,
-        duration: const Duration(milliseconds: 100),
-        curve: Curves.easeOutCubic,
-        child: widget.child,
-      ),
+      child: AnimatedScale(scale: _scale, duration: const Duration(milliseconds:100), child: widget.child),
     );
   }
 }

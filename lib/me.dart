@@ -6,8 +6,7 @@ import 'notification_page.dart';
 import 'premium_page.dart';
 import 'security_page.dart';
 import 'support_page.dart';
-import 'trainquest_scope.dart';
-import 'main.dart'; // 👈 已经引入，能读到 isChinese 了
+import 'main.dart';
 
 class MePage extends StatefulWidget {
   const MePage({super.key});
@@ -17,15 +16,22 @@ class MePage extends StatefulWidget {
 }
 
 class _MePageState extends State<MePage> {
-  static const Color bgColor = Color(0xFFF1F8E9); // 浅绿背景
+  static const Color bgColor = Color(0xFFF1F8E9);
   static const Color mainGreen = Color(0xFFD1E683);
   static const Color darkCard = Color(0xFF1A1C1E);
 
+  // 🔥 本地假数据，完全不请求API
+  final Map<String, dynamic> localUser = {
+    "username": "PandaUser",
+    "email": "trainquest@example.com",
+    "level": 1,
+    "xp": 10,
+    "streakDays": 2,
+    "totalSignInDays": 5,
+  };
+
   @override
   Widget build(BuildContext context) {
-    final controller = TrainQuestScope.of(context);
-    final user = controller.user;
-
     return Scaffold(
       backgroundColor: bgColor,
       body: SafeArea(
@@ -49,9 +55,9 @@ class _MePageState extends State<MePage> {
               _animatedEntrance(
                 delay: 100,
                 child: _buildProfileCard(
-                  userName: user?.username ?? 'TrainQuest User',
-                  email: user?.email ?? '',
-                  level: user?.level ?? 1,
+                  userName: localUser["username"],
+                  email: localUser["email"],
+                  level: localUser["level"],
                 ),
               ),
               const SizedBox(height: 20),
@@ -62,7 +68,7 @@ class _MePageState extends State<MePage> {
                       delay: 200,
                       child: _buildStatItem(
                         isChinese ? "活跃" : "Active",
-                        '${user?.totalSignInDays ?? 0}',
+                        '${localUser["totalSignInDays"]}',
                         isChinese ? "天" : "Days",
                       ),
                     ),
@@ -73,7 +79,7 @@ class _MePageState extends State<MePage> {
                       delay: 300,
                       child: _buildStatItem(
                         isChinese ? "经验值" : "XP",
-                        '${user?.xp ?? 0}',
+                        '${localUser["xp"]}',
                         isChinese ? "分" : "Points",
                       ),
                     ),
@@ -88,7 +94,7 @@ class _MePageState extends State<MePage> {
                       delay: 350,
                       child: _buildStatItem(
                         isChinese ? "连续" : "Streak",
-                        '${user?.streakDays ?? 0}',
+                        '${localUser["streakDays"]}',
                         isChinese ? "天" : "Days",
                       ),
                     ),
@@ -99,7 +105,7 @@ class _MePageState extends State<MePage> {
                       delay: 400,
                       child: _buildStatItem(
                         isChinese ? "等级" : "Level",
-                        '${user?.level ?? 1}',
+                        '${localUser["level"]}',
                         isChinese ? "级" : "Rank",
                       ),
                     ),
@@ -166,7 +172,7 @@ class _MePageState extends State<MePage> {
                     borderRadius: BorderRadius.circular(28),
                   ),
                   child: Text(
-                    isChinese ? "后端已连接" : "Connected backend: ${controller.baseUrl}",
+                    isChinese ? "离线模式运行中" : "Running in offline mode",
                     style: const TextStyle(color: Colors.black54),
                   ),
                 ),
@@ -175,7 +181,11 @@ class _MePageState extends State<MePage> {
               _animatedEntrance(
                 delay: 620,
                 child: TextButton(
-                  onPressed: () => controller.logout(),
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(isChinese ? "已退出登录" : "Logged out")),
+                    );
+                  },
                   child: Text(
                     isChinese ? "退出登录" : "Log Out",
                     style: const TextStyle(
