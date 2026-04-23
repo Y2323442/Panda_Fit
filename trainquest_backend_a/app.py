@@ -19,7 +19,6 @@ from routes.badge_routes import badge_bp
 from routes.photo_routes import photo_bp
 from routes.dashboard_routes import dashboard_bp
 
-import os
 os.environ["FLASK_ENV"] = "production"
 os.environ["DATABASE_URL"] = "sqlite:////tmp/pandafit.db"
 os.environ["UPLOAD_FOLDER"] = "/tmp/uploads"
@@ -36,20 +35,18 @@ def create_app():
     os.makedirs(os.path.join(base_dir, "instance"), exist_ok=True)
     os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
 
-    app.register_blueprint(auth_bp)
-    app.register_blueprint(task_bp)
-    app.register_blueprint(progress_bp)
-    app.register_blueprint(badge_bp)
-    app.register_blueprint(photo_bp)
-    app.register_blueprint(dashboard_bp)
+    # ========== 这里是关键修改！添加了 API 前缀 ==========
+    app.register_blueprint(auth_bp, url_prefix="/api/auth")
+    app.register_blueprint(task_bp, url_prefix="/api/tasks")
+    app.register_blueprint(progress_bp, url_prefix="/api/progress")
+    app.register_blueprint(badge_bp, url_prefix="/api/badges")
+    app.register_blueprint(photo_bp, url_prefix="/api/photos")
+    app.register_blueprint(dashboard_bp, url_prefix="/api/dashboard")
+    # ====================================================
 
     @app.route("/")
     def index():
-        return send_from_directory(app.static_folder, "index.html")
-
-    @app.route("/<path:filename>")
-    def serve_flutter_files(filename):
-        return send_from_directory(app.static_folder, filename)
+        return "Hello from Flask!"  # 测试用
 
     @app.route("/uploads/<filename>", methods=["GET"])
     @token_required
