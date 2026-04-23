@@ -13,7 +13,7 @@ class ApiConfig {
     if (kIsWeb) {
       return ''; // <-- 留空就是最佳方案！
     } else {
-      return 'http://172.20.10.2:8080';
+      return 'https://Y208.pythonanywhere.com';
     }
   }
 }
