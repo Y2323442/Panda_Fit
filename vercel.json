@@ -1,20 +1,11 @@
 {
-  "buildCommand": "flutter build web --base-href '/'",
-  "installCommand": "pip install -r api/requirements.txt",
-  "outputDirectory": "build/web",
-  "functions": {
-    "api/app.py": {
-      "runtime": "python3.11"
+  "build": {
+    "env": {
+      "FLUTTER_VERSION": "3.22.3"
     }
   },
-  "rewrites": [
-    {
-      "source": "/api/:path*",
-      "destination": "/api/app.py"
-    },
-    {
-      "source": "/:path*",
-      "destination": "/build/web/index.html"
-    }
-  ]
+  "installCommand": "flutter pub get",
+  "buildCommand": "flutter build web --release --base-href /",
+  "outputDirectory": "build/web",
+  "framework": "flutter"
 }

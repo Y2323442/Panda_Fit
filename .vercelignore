@@ -1,0 +1,16 @@
+# 忽略后端 & 数据库
+trainquest_backend_a/
+api/
+requirements.txt
+
+# 忽略其他平台（只保留web）
+android/
+ios/
+linux/
+macos/
+windows/
+
+# 忽略开发缓存
+.dart_tool/
+.idea/
+*.iml
