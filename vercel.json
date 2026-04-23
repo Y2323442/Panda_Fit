@@ -1,10 +1,13 @@
 {
-  "builds": [
-    { "src": "build/web", "use": "@vercel/static" },
-    { "src": "trainquest_backend_a/app.py", "use": "@vercel/python" }
-  ],
-  "routes": [
-    { "src": "/api/(.*)", "dest": "trainquest_backend_a/app.py" },
-    { "src": "/(.*)", "dest": "build/web/$1" }
+  "framework": null,
+  "outputDirectory": "build/web",
+  "functions": {
+    "api/index.py": {
+      "runtime": "python3.12"
+    }
+  },
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/index.py" },
+    { "source": "/(.*)", "destination": "/build/web/index.html" }
   ]
 }
