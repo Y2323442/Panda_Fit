@@ -21,7 +21,6 @@ from routes.dashboard_routes import dashboard_bp
 
 
 def create_app():
-    # ✅ 关键：直接指向 Flutter 编译的 build/web，不用 static！
     app = Flask(__name__, static_folder="../build/web", static_url_path="")
     app.config.from_object(Config)
 
@@ -39,17 +38,14 @@ def create_app():
     app.register_blueprint(photo_bp)
     app.register_blueprint(dashboard_bp)
 
-    # 主页直接读取 Flutter 编译好的文件
     @app.route("/")
     def index():
         return send_from_directory(app.static_folder, "index.html")
 
-    # ✅ 自动处理 /Panda_Burn/xxx 路径，永不 404
-    @app.route("/Panda_Burn/<path:filename>")
-    def panda_files(filename):
+    @app.route("/<path:filename>")
+    def serve_flutter_files(filename):
         return send_from_directory(app.static_folder, filename)
 
-    # 上传图片接口
     @app.route("/uploads/<filename>", methods=["GET"])
     @token_required
     def uploaded_file(current_user, filename):
