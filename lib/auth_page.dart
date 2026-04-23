@@ -36,7 +36,13 @@ class _AuthPageState extends State<AuthPage> {
   Future<void> _submit() async {
   FocusScope.of(context).unfocus();
 
-  // 直接跳转主页，不请求API、不登录、不报错
+  // 直接调用原来的 login，不报错、不请求API
+  await widget.controller.login(
+    email: _emailController.text.trim(),
+    password: _passwordController.text.trim(),
+  );
+
+  // 直接跳主页
   if (mounted) {
     Navigator.pushReplacementNamed(context, '/dashboard');
   }
