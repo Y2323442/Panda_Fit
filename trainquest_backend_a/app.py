@@ -19,6 +19,11 @@ from routes.badge_routes import badge_bp
 from routes.photo_routes import photo_bp
 from routes.dashboard_routes import dashboard_bp
 
+import os
+os.environ["FLASK_ENV"] = "production"
+os.environ["DATABASE_URL"] = "sqlite:////tmp/pandafit.db"
+os.environ["UPLOAD_FOLDER"] = "/tmp/uploads"
+
 
 def create_app():
     app = Flask(__name__, static_folder="../build/web", static_url_path="")
