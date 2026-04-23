@@ -1,3 +1,15 @@
 {
-  "outputDirectory": "build/web"
+  "buildCommand": "pip install -r trainquest_backend_a/requirements.txt",
+  "devCommand": "python trainquest_backend_a/app.py",
+  "installCommand": "pip install -r trainquest_backend_a/requirements.txt",
+  "outputDirectory": "build/web",
+  "functions": {
+    "trainquest_backend_a/app.py": {
+      "runtime": "@vercel/python@4.3.0"
+    }
+  },
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "trainquest_backend_a/app.py" },
+    { "source": "/(.*)", "destination": "build/web/index.html" }
+  ]
 }
