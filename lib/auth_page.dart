@@ -32,23 +32,15 @@ class _AuthPageState extends State<AuthPage> {
     super.dispose();
   }
 
+  // 🔥 核心修改：不请求API，直接登录成功
   Future<void> _submit() async {
-    FocusScope.of(context).unfocus();
+  FocusScope.of(context).unfocus();
 
-    if (_isRegisterMode) {
-      await widget.controller.register(
-        username: _usernameController.text.trim(),
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
-      );
-      return;
-    }
-
-    await widget.controller.login(
-      email: _emailController.text.trim(),
-      password: _passwordController.text.trim(),
-    );
+  // 直接跳转主页，不请求API、不登录、不报错
+  if (mounted) {
+    Navigator.pushReplacementNamed(context, '/dashboard');
   }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -103,8 +95,8 @@ class _AuthPageState extends State<AuthPage> {
                     const SizedBox(height: 8),
                     Text(
                       _isRegisterMode
-                          ? 'Create an account and connect the frontend to your Flask backend.'
-                          : 'Sign in to load your real tasks, progress, photos, and badges.',
+                          ? 'Create an account (offline mode)'
+                          : 'Sign in (offline mode)',
                       style: TextStyle(
                         color: Colors.black.withValues(alpha: 0.6),
                         height: 1.45,
@@ -144,24 +136,7 @@ class _AuthPageState extends State<AuthPage> {
                       icon: Icons.lock_outline,
                       obscureText: true,
                     ),
-                    if (controller.authError != null) ...<Widget>[
-                      const SizedBox(height: 14),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFFF0F0),
-                          borderRadius: BorderRadius.circular(18),
-                        ),
-                        child: Text(
-                          controller.authError!,
-                          style: const TextStyle(
-                            color: Colors.redAccent,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ],
+                    // 错误提示隐藏
                     const SizedBox(height: 20),
                     SizedBox(
                       width: double.infinity,
@@ -173,29 +148,20 @@ class _AuthPageState extends State<AuthPage> {
                             borderRadius: BorderRadius.circular(22),
                           ),
                         ),
-                        onPressed: controller.isAuthenticating ? null : _submit,
-                        child: controller.isAuthenticating
-                            ? const SizedBox(
-                                width: 22,
-                                height: 22,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2.4,
-                                  color: mainGreen,
-                                ),
-                              )
-                            : Text(
-                                _isRegisterMode ? 'Create Account' : 'Enter App',
-                                style: const TextStyle(
-                                  color: mainGreen,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                              ),
+                        onPressed: _submit,
+                        child: Text(
+                          _isRegisterMode ? 'Create Account' : 'Enter App',
+                          style: const TextStyle(
+                            color: mainGreen,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 18),
                     Text(
-                      'API Base URL: ${controller.baseUrl}',
+                      'Running in offline mode',
                       style: TextStyle(
                         color: Colors.black.withValues(alpha: 0.45),
                         fontSize: 12,
