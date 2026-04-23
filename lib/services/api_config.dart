@@ -9,11 +9,11 @@ class ApiConfig {
       return _envBaseUrl;
     }
 
-    // 👇 👇 👇 只改这里！上线永久可用！
+    // 🔥 这是你 Vercel 部署后的正确地址
     if (kIsWeb) {
-      return ''; // <-- 留空就是最佳方案！
+      return 'https://panda-five-delta.vercel.app/api';
     } else {
-      return 'https://Y208.pythonanywhere.com';
+      return 'https://panda-five-delta.vercel.app/api';
     }
   }
 }

@@ -28844,7 +28844,7 @@ aTB(a,b,c,d,e,f){var s=a[b]()
 return s},
 aIi(a,b,c){var s=null
 return c.a(A.aTB(a,b,s,s,s,s))},
-aQR(){return""},
+aQR(){return"https://panda-five-delta.vercel.app/api"},
 b0S(a,b,c,d){var s,r,q,p,o,n=A.t(d,c.i("R<0>"))
 for(s=c.i("G<0>"),r=0;r<1;++r){q=a[r]
 p=b.$1(q)
