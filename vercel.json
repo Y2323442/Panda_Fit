@@ -2,19 +2,21 @@
   "buildCommand": "flutter build web --base-href '/'",
   "installCommand": "pip install -r trainquest_backend_a/requirements.txt",
   "outputDirectory": "build/web",
+
   "functions": {
-    "trainquest_backend_a/app.py": {
+    "api/index.py": {
       "runtime": "python3.11"
     }
   },
+
   "rewrites": [
     {
-      "source": "/api/(.*)",
-      "destination": "trainquest_backend_a/app.py"
+      "source": "/api/:path*",
+      "destination": "/api/index.py"
     },
     {
-      "source": "/(.*)",
-      "destination": "build/web/index.html"
+      "source": "/:path*",
+      "destination": "/build/web/index.html"
     }
   ]
 }
