@@ -1,13 +1,3 @@
 {
-  "framework": null,
-  "outputDirectory": "build/web",
-  "functions": {
-    "api/index.py": {
-      "runtime": "python3.12"
-    }
-  },
-  "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/index.py" },
-    { "source": "/(.*)", "destination": "/build/web/index.html" }
-  ]
+  "outputDirectory": "build/web"
 }
